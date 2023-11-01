@@ -1,30 +1,53 @@
 import asyncio
 import logging
 import sys
-from os import getenv
-from aiogram import Bot, Dispatcher, Router, types
+from datetime import datetime
+from config import BOT_TOKEN, FLOOD_TIME, EXCEPT_USERS
+from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode, ChatAction
 from aiogram.filters import CommandStart
 from aiogram.types import Message
-from dotenv import load_dotenv
-import g4f
+from g4f import ChatCompletion
+from db.models import GetDB, User
 
-load_dotenv()
-TOKEN = getenv("BOT_TOKEN")
+
 dp = Dispatcher()
-bot = Bot(TOKEN, parse_mode=ParseMode.MARKDOWN)
+bot = Bot(BOT_TOKEN, parse_mode=ParseMode.MARKDOWN)
 
 
 @dp.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
+async def start(message: Message) -> None:
+    user = message.from_user
+    with GetDB() as db:
+        User.update_or_create(
+            db=db,
+            userid=user.id,
+            name=user.full_name,
+            username=user.username
+        )
     await message.answer(f"Hello, {message.from_user.full_name}!")
 
 
 @dp.message()
-async def gpt_handler(message: types.Message) -> None:
+async def chat(message: types.Message) -> None:
+    user = message.from_user
+    with GetDB() as db:
+        db_user = User.update_or_create(
+            db=db,
+            userid=user.id,
+            name=user.first_name,
+            username=user.username
+        )
+        if user.id not in EXCEPT_USERS:
+            if db_user.last_used and (datetime.now() - db_user.last_used).seconds < FLOOD_TIME:
+                await message.answer(
+                    f'Please wait {FLOOD_TIME - (datetime.now() - db_user.last_used).seconds} seconds')
+                return
+            else:
+                db_user.set_last_used(db)
     for i in range(3):
         await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
-        response = await g4f.ChatCompletion.create_async(
+        response = await ChatCompletion.create_async(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": message.text}])
         if response:
@@ -34,10 +57,6 @@ async def gpt_handler(message: types.Message) -> None:
         await message.answer('Error!')
 
 
-async def main() -> None:
-    await dp.start_polling(bot)
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    asyncio.run(main())
+    asyncio.run(dp.start_polling(bot))
