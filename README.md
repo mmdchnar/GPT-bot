@@ -14,3 +14,6 @@ alembic upgrade head
 ```bash
 python3 bot.py
 ```
+
+if you want to see simple version of the code look at this:
+[Simple Version](https://github.com/mmdchnar/GPT-bot/tree/0607259ea86dcd9b1b2a7477d47b93396d4c71b5)
