@@ -75,13 +75,16 @@ async def chat(message: types.Message) -> None:
             else:
                 db_user.set_last_used(db)
     for i in range(3):
-        await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
-        response = await ChatCompletion.create_async(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": message.text}])
-        if response:
-            await message.answer(response)
-            break
+        try:
+            await bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+            response = await ChatCompletion.create_async(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": message.text}])
+            if response:
+                await message.answer(response)
+                break
+        except RuntimeError:
+            continue
     else:
         await message.answer('Error!')
 
