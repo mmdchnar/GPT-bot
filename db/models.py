@@ -2,9 +2,10 @@ from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
+from config import SQLALCHEMY_DATABASE_URL
 
 
-engine = create_engine('sqlite:///db.sqlite3')
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
